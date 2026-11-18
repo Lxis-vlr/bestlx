@@ -1,8 +1,8 @@
 // Service worker: guarda la app para que abra sin internet.
 // Cambia el número de versión cada vez que subas cambios, para que el iPhone los descargue.
-const CACHE = 'bestlx-v2';
+const CACHE = 'bestlx-v3';
 const ARCHIVOS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest',
-  './data/frases.json', './data/retos.json', './data/preguntas.json',
+  './data/frases.json', './data/retos.json', './data/preguntas.json', './data/aprender.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

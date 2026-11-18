@@ -1,6 +1,15 @@
 # BESTLX
 
-Tu centro de control en el iPhone (PWA): entregas de Canvas con prioridad, lectura, reto social diario, uso de redes, frase del día y preguntas para conversar. No usa IA ni APIs de pago.
+Tu centro de control en el iPhone (PWA). Cinco pestañas: **Hoy · Clases · Misiones · Diario · Progreso**. Incluye el botón *Estoy aburrido*, Canvas con prioridad, escuela de ventas, negocios, Cuarenta, Go y redes, inglés para vender, repaso espaciado, lectura, social, cuerpo, notas, XP con 5 atributos y rangos hasta GOD, jefe semanal, tienda de recompensas y tablero. No usa IA ni APIs de pago.
+
+## Si ya tenías la versión anterior
+
+1. Reemplaza todo `Code.gs` por el nuevo y vuelve a poner tu token en la línea 13.
+2. Ejecuta **`setup`** otra vez: crea las pestañas nuevas (XP, Notas, Agua, Salud, Enfoque, Repaso, Personas, Tienda, Canjes) sin borrar nada.
+3. **Implementar > Gestionar implementaciones > ✏️ > Nueva versión > Implementar.** Sin esto, la app no puede guardar en las pestañas nuevas.
+4. Copia la carpeta nueva encima de la vieja, `git add . && git commit -m "BESTLX v3" && git push`, y abre la app dos veces para que el iPhone baje la versión nueva.
+
+Tus datos anteriores se conservan, y la primera vez la app te da XP por todo lo que ya habías hecho.
 
 Funciona desde el primer momento guardando en el teléfono. Al conectar tu Google Sheet, cada registro también se envía allá y no se pierde si Safari borra el almacenamiento.
 
@@ -56,15 +65,9 @@ En la app: **Progreso > Ajustes y Google Sheet**. Pega la URL `/exec` y tu token
 En la app **Atajos** del iPhone, pestaña **Automatización**:
 
 1. **Nueva automatización > App** > elige Instagram > **Se abre** > **Ejecutar inmediatamente**.
-2. Acción: **Obtener contenido de URL**, con esta dirección (cambia la URL y el token por los tuyos):
-
-   ```
-   https://script.google.com/macros/s/XXXX/exec?action=redes&app=Instagram&token=TU-TOKEN
-   ```
-
-3. Repite para TikTok (`app=TikTok`) y X (`app=X`). El nombre debe ser igual al que aparece en los Ajustes de la app.
-
-Cada apertura agrega una fila en la pestaña Redes con fecha y hora de Quito.
+2. Acción: **Obtener contenido de URL**. La URL exacta está lista para copiar en **Progreso › Ajustes › URLs para tus Atajos**.
+3. Acción: **Mostrar notificación** con la variable **Contenido de URL**. Te dirá cuántas aperturas llevas y te propondrá una misión en vez de la red.
+4. Repite para TikTok y X.
 
 ## 6. Recordatorio semanal
 
@@ -109,14 +112,40 @@ En **Atajos > Automatización > +** > **Hora del día** > 7:00, Diariamente > **
 2. Acción **Mostrar notificación**: en el título pon `BESTLX` y en el cuerpo elige la variable **Contenido de URL**.
 3. Listo. Cada mañana llega una notificación con lo que vence hoy, mañana y en la semana, marcando con ⚠ lo de prioridad alta. Al tocarla puedes abrir la app.
 
+## 8. Atajos de la versión 3
+
+Todas las URLs están listas para copiar en **Progreso › Ajustes › URLs para tus Atajos**; ahí ya llevan tu token.
+
+| Atajo | Cómo se crea | Acciones |
+| --- | --- | --- |
+| "Oye Siri, estoy aburrido" | Atajos › Mis atajos › + › nómbralo *Estoy aburrido* | Obtener contenido de URL (`action=mision`) → Mostrar resultado |
+| "Oye Siri, nota BESTLX" | Nuevo atajo llamado *Nota BESTLX* | Dictar texto → Obtener contenido de URL con la URL de nota y la variable *Texto dictado* al final → Mostrar resultado |
+| +1 vaso de agua | Nuevo atajo; agrégalo al widget de Atajos | Obtener contenido de URL (`action=agua`) → Mostrar notificación |
+| Recordatorio de agua | Automatización › Hora del día, una por hora: 9, 11, 13, 15, 17, 19 y 21 | Mostrar notificación "Toma agua" |
+| Salud nocturna | Automatización › Hora del día 23:30 | Buscar muestras de salud (Pasos, hoy) → Calcular estadísticas (Suma) → Obtener contenido de URL de salud cambiando `PASOS` por esa variable. Las horas de sueño puedes anotarlas en Diario › Cuerpo |
+| Llegar a la U | Automatización › Llegar › UIDE | Obtener contenido de URL (`action=resumen`) → Mostrar notificación |
+| Llegar a casa | Automatización › Llegar › tu casa | Abrir URL `…/bestlx/?mision=1` |
+| Foco Estudio | Automatización › Foco › Estudio › Al activarse | Abrir URL `…/bestlx/?enfoque=1` |
+| Cierra el día | Automatización › Hora del día 23:00 | Mostrar notificación "Cierra el día en BESTLX" |
+| Resumen del domingo | Automatización › Hora del día, domingo 20:00 | Obtener contenido de URL (`action=semana`) → Mostrar notificación |
+
+## Cómo funciona el XP
+
+- Todo suma a uno de 5 atributos: Fuerza, Mente, Carisma, Disciplina y Enfoque. La suma da tu rango: Iniciado (0), Hoplita (300), Espartano (1.000), Campeón (2.500), Semidiós (5.000) y GOD (10.000).
+- Cada mes un atributo da XP doble (temporada). Avanzar en 3 atributos el mismo día activa el combo: el resto del día, XP ×1,5.
+- Quedarte bajo el límite de aperturas de redes da +10 de Enfoque al día siguiente; pasarlo resta hasta 15.
+- El jefe semanal cambia cada lunes. Derrotarlo da 30 XP a cada atributo.
+- En la tienda gastas saldo; eso no te baja de rango. El escudo de racha cuesta 100.
+- Todo queda en la pestaña XP del Sheet, con motivo y detalle.
+
 ## Cómo funciona por dentro
 
 - **Frase del día:** se elige por el día del año, alternando idioma y tema.
 - **Reto:** sale del nivel en el que estás, sin repetir los que ya hiciste. "Cambiar" da otro del mismo nivel. Subes de nivel al completar 5.
 - **Rachas:** días seguidos con páginas leídas o con el reto hecho; si hoy aún no anotas, la racha de ayer se mantiene.
 - **Sincronización:** cada registro se guarda en el teléfono y entra en una cola; la cola se envía al Sheet y, si no hay internet, se reintenta al volver a abrir la app. Al abrir, la app lee el Sheet para traer lo que anotó el Atajo y lo que trajo Canvas.
-- **Pantallas:** Hoy · Clases · Lectura · Social (con las preguntas para conversar) · Progreso.
+- **Pantallas:** Hoy · Clases · Misiones · Diario (Lectura, Social, Cuerpo, Notas) · Progreso (Nivel, Tienda, Tablero, Ajustes).
 
 ## Actualizar la app
 
-Después de cambiar archivos, sube el número en la línea 3 de `sw.js` (`bestlx-v2` a `bestlx-v3`) antes de hacer `git push`; así el iPhone descarga la versión nueva.
+Después de cambiar archivos, sube el número en la línea 3 de `sw.js` (`bestlx-v3` a `bestlx-v4`) antes de hacer `git push`; así el iPhone descarga la versión nueva.

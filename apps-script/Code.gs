@@ -19,14 +19,25 @@ const TABS = {
   'Social': ['Fecha', 'Nivel', 'Reto', 'Hecho', 'Cómo te fue', 'Nota'],
   'Redes': ['Fecha y hora', 'App'],
   'Tiempo en pantalla': ['Semana', 'Horas totales', 'Horas en redes'],
-  'Canvas': ['ID', 'Materia', 'Tipo', 'Título', 'Vence', 'Puntos', 'Peso', 'Prioridad', 'Entregado', 'Nota', 'Link', 'Actualizado']
+  'Canvas': ['ID', 'Materia', 'Tipo', 'Título', 'Vence', 'Puntos', 'Peso', 'Prioridad', 'Entregado', 'Nota', 'Link', 'Actualizado'],
+  'XP': ['Fecha y hora', 'Atributo', 'Puntos', 'Motivo', 'Detalle'],
+  'Notas': ['Fecha y hora', 'Tipo', 'Texto', 'Energía', 'Etiqueta', 'Abre'],
+  'Agua': ['Fecha y hora', 'Vasos'],
+  'Salud': ['Fecha', 'Pasos', 'Sueño'],
+  'Enfoque': ['Fecha y hora', 'Tema', 'Minutos'],
+  'Repaso': ['ID', 'Paso', 'Siguiente', 'Visto'],
+  'Personas': ['Nombre', 'Cada', 'Último'],
+  'Tienda': ['Premio', 'Costo'],
+  'Canjes': ['Fecha y hora', 'Premio', 'Costo']
 };
 // La app solo escribe en estas; Canvas la llena el script
-const ESCRIBIBLES = ['Lectura', 'Libros', 'Social', 'Redes', 'Tiempo en pantalla'];
+const ESCRIBIBLES = ['Lectura', 'Libros', 'Social', 'Redes', 'Tiempo en pantalla', 'XP', 'Notas', 'Agua', 'Salud', 'Enfoque', 'Repaso', 'Personas', 'Tienda', 'Canjes'];
 // Columnas que se guardan como texto para que Sheets no cambie el formato de las fechas
 const TEXTO = ['Fecha', 'Inicio', 'Fin', 'Fecha y hora', 'Semana', 'Libro', 'Reto', 'Nota', 'Autor', 'App', 'Hecho',
-  'ID', 'Materia', 'Tipo', 'Título', 'Vence', 'Prioridad', 'Entregado', 'Link', 'Actualizado'];
-const NUMEROS = ['Páginas', 'Minutos', 'Páginas totales', 'Nivel', 'Cómo te fue', 'Horas totales', 'Horas en redes', 'Puntos', 'Peso'];
+  'ID', 'Materia', 'Tipo', 'Título', 'Vence', 'Prioridad', 'Entregado', 'Link', 'Actualizado',
+  'Atributo', 'Motivo', 'Detalle', 'Texto', 'Etiqueta', 'Abre', 'Tema', 'Siguiente', 'Visto', 'Nombre', 'Último', 'Premio'];
+const NUMEROS = ['Páginas', 'Minutos', 'Páginas totales', 'Nivel', 'Cómo te fue', 'Horas totales', 'Horas en redes', 'Puntos', 'Peso',
+  'Energía', 'Vasos', 'Pasos', 'Sueño', 'Paso', 'Cada', 'Costo'];
 
 /* ======================= Sheet ======================= */
 
@@ -100,9 +111,53 @@ function actualizar(nombre, keys, row) {
   agregar(nombre, row);
 }
 
+const ahoraTxt = () => Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
+const hoyTxt = () => Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+
 function registrarApertura(app) {
   const nombre = String(app || 'Otra').trim().slice(0, 30);
-  agregar('Redes', { 'Fecha y hora': Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'), 'App': nombre });
+  agregar('Redes', { 'Fecha y hora': ahoraTxt(), 'App': nombre });
+  return leer('Redes').filter(function (r) { return String(r['Fecha y hora']).slice(0, 10) === hoyTxt(); }).length;
+}
+
+/* Misiones cortas para Siri y para el aviso al abrir redes */
+const ALTERNATIVAS = [
+  '15 sentadillas ahora mismo.', 'Toma un vaso de agua completo.', 'Lee 5 páginas de tu libro.',
+  'Escríbele a alguien de tu lista de personas.', 'Haz 3 repasos en BESTLX.', 'Estira la espalda 2 minutos.',
+  'Escribe una idea de negocio en tus notas.', 'Lee el concepto de ventas del día.', 'Practica una frase en inglés en voz alta.',
+  'Respira lento 1 minuto: 4 segundos dentro, 6 fuera.', 'Planea las 3 tareas más importantes de mañana.',
+  'Haz una ronda del entrenador de Cuarenta.', 'Ordena tu escritorio 5 minutos.', 'Abre BESTLX y toca Estoy aburrido.',
+  'Resuelve un micro-reto de Go o de redes.', 'Escribe una victoria de hoy.', '10 flexiones, aunque sean de rodillas.',
+  'Mira por la ventana 1 minuto sin pantalla.', 'Explica en voz baja el tema de tu última clase.', 'Practica tu pitch de 30 segundos.'
+];
+function alternativa() { return ALTERNATIVAS[Math.floor(Math.random() * ALTERNATIVAS.length)]; }
+
+function textoRedes(app, n, limite) {
+  const lim = Number(limite) || 15;
+  const h = Number(Utilities.formatDate(new Date(), TZ, 'H'));
+  let t = app + ' · apertura ' + n + ' de ' + lim + ' hoy.';
+  if (n > lim) t += ' Ya pasaste tu límite: esto resta XP de Enfoque.';
+  if (h >= 23 || h < 5) t += ' Ya es tarde: ciérrala y duerme, mañana te lo agradeces.';
+  return t + '\nEn vez de eso: ' + alternativa();
+}
+
+/** Resumen de los últimos 7 días para la notificación del domingo. */
+function resumenSemana() {
+  const desde = Utilities.formatDate(new Date(Date.now() - 6 * 864e5), TZ, 'yyyy-MM-dd');
+  const enSemana = function (r, col) { return String(r[col]).slice(0, 10) >= desde; };
+  const xp = leer('XP').filter(function (r) { return enSemana(r, 'Fecha y hora'); });
+  const por = {};
+  xp.forEach(function (r) { por[r.Atributo] = (por[r.Atributo] || 0) + (Number(r.Puntos) || 0); });
+  const total = Object.keys(por).reduce(function (t, k) { return t + por[k]; }, 0);
+  const jefe = xp.some(function (r) { return String(r.Motivo).indexOf('jefe:') === 0; });
+  const pags = leer('Lectura').filter(function (r) { return enSemana(r, 'Fecha'); }).reduce(function (t, r) { return t + (Number(r['Páginas']) || 0); }, 0);
+  const redes = leer('Redes').filter(function (r) { return enSemana(r, 'Fecha y hora'); }).length;
+  const enfoque = leer('Enfoque').filter(function (r) { return enSemana(r, 'Fecha y hora'); }).reduce(function (t, r) { return t + (Number(r.Minutos) || 0); }, 0);
+  const attrs = Object.keys(por).filter(function (k) { return por[k]; }).sort(function (a, b) { return por[b] - por[a]; })
+    .map(function (k) { return k + ' +' + por[k]; }).join(' · ');
+  return 'BESTLX · tu semana: +' + total + ' XP' + (attrs ? '\n' + attrs : '') +
+    '\n' + pags + ' páginas · ' + Math.round(enfoque / 6) / 10 + ' h de enfoque · ' + redes + ' aperturas de redes' +
+    '\nJefe semanal: ' + (jefe ? 'derrotado' : 'sigue en pie');
 }
 
 /* ======================= Canvas ======================= */
@@ -285,7 +340,26 @@ function probarCanvas() {
 function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.token !== TOKEN) return salida({ ok: false, error: 'token' });
-  if (p.action === 'redes') { registrarApertura(p.app); return salida({ ok: true }); }
+  if (p.action === 'redes') { const n = registrarApertura(p.app); return salidaTexto(textoRedes(p.app || 'Red', n, p.limite)); }
+  if (p.action === 'mision') return salidaTexto('Misión: ' + alternativa());
+  if (p.action === 'nota') {
+    const t = String(p.texto || '').trim().slice(0, 1000);
+    if (!t) return salidaTexto('No escuché la nota.');
+    agregar('Notas', { 'Fecha y hora': ahoraTxt(), 'Tipo': 'rapida', 'Texto': t, 'Etiqueta': 'siri' });
+    return salidaTexto('Nota guardada en BESTLX.');
+  }
+  if (p.action === 'agua') {
+    agregar('Agua', { 'Fecha y hora': ahoraTxt(), 'Vasos': 1 });
+    const n = leer('Agua').filter(function (r) { return String(r['Fecha y hora']).slice(0, 10) === hoyTxt(); }).length;
+    return salidaTexto('Vaso ' + n + ' de 8 hoy.' + (n >= 8 ? ' Meta cumplida.' : ''));
+  }
+  if (p.action === 'salud') {
+    const pasos = Math.round(Number(String(p.pasos || '').replace(',', '.')) || 0);
+    const sueno = Math.round((Number(String(p.sueno || '').replace(',', '.')) || 0) * 10) / 10;
+    actualizar('Salud', ['Fecha'], { 'Fecha': p.fecha || hoyTxt(), 'Pasos': pasos || '', 'Sueño': sueno || '' });
+    return salidaTexto('Salud guardada: ' + pasos + ' pasos' + (sueno ? ', ' + sueno + ' h de sueño' : '') + '.');
+  }
+  if (p.action === 'semana') return salidaTexto(resumenSemana());
   if (p.action === 'resumen') return salidaTexto(resumenTexto());
   if (p.action === 'canvas_sync') {
     try { return salida({ ok: true, n: syncCanvas() }); }
